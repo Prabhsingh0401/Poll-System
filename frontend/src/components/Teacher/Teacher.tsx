@@ -188,6 +188,18 @@ const Teacher: React.FC = () => {
   useSocket("pollHistory", onPollHistoryReceived);
   useSocket("pollHistoryUpdated", onPollHistoryUpdated);
 
+  // Ensure the socket connects only after all handlers are registered
+  // to avoid missing immediate events.
+  useEffect(() => {
+    try {
+      if (socket && !socket.connected) {
+        socket.connect();
+      }
+    } catch (err) {
+      console.error("Error connecting socket:", err);
+    }
+  }, []);
+
   /* -------------------- Local Handlers -------------------- */
 
   const handleOptionChange = (index: number, value: string): void => {
@@ -214,9 +226,12 @@ const Teacher: React.FC = () => {
     const validOptions = options.filter((opt) => opt.trim() !== "");
 
     if (question.trim() && validOptions.length >= 2) {
+      // Get the correct answer from the original options array before filtering
       const correctAnswer =
-        correctIndex !== null && validOptions[correctIndex]
-          ? validOptions[correctIndex]
+        correctIndex !== null &&
+        correctIndex < options.length &&
+        options[correctIndex]
+          ? options[correctIndex].trim()
           : undefined;
 
       socket.emit("createPoll", {
@@ -240,9 +255,12 @@ const Teacher: React.FC = () => {
       socket.emit("preparingNextQuestion");
 
       setTimeout(() => {
+        // Get the correct answer from the original options array before filtering
         const correctAnswer =
-          correctIndex !== null && validOptions[correctIndex]
-            ? validOptions[correctIndex]
+          correctIndex !== null &&
+          correctIndex < options.length &&
+          options[correctIndex]
+            ? options[correctIndex].trim()
             : undefined;
 
         socket.emit("nextQuestion", {

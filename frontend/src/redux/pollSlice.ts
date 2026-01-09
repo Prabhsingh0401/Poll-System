@@ -7,6 +7,7 @@ export interface PollState {
   options: string[];
   duration: number;
   responses: Record<string, number>;
+  correctAnswer?: string | null;
 }
 
 /* -------------------- Initial State -------------------- */

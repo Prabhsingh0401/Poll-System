@@ -32,6 +32,8 @@ const CreatePollForm: React.FC<CreatePollFormProps> = ({
   correctIndex,
   setCorrectIndex,
 }) => {
+  const validOptionCount = options.filter((o) => o.trim()).length;
+  const isDisabled = !question.trim() || validOptionCount < 2;
   return (
     <>
       <div className="w-full mx-auto relative h-[85vh] px-4">
@@ -171,18 +173,16 @@ const CreatePollForm: React.FC<CreatePollFormProps> = ({
       </div>
 
       {/* Footer */}
-      <div className="w-full mx-auto border-t border-gray-200 flex justify-end p-2">
+      <div className="w-full mx-auto border-t border-gray-200 flex justify-end p-2 relative z-50">
         <button
           onClick={createPoll}
-          disabled={
-            !question.trim() || options.filter((o) => o.trim()).length < 2
-          }
-          className={`px-6 py-2.5 rounded-full
+          disabled={isDisabled}
+          className={`px-6 py-2.5 rounded-full relative z-50 pointer-events-auto
             text-sm font-medium transition
             ${
-              !question.trim() || options.filter((o) => o.trim()).length < 2
+              isDisabled
                 ? "bg-gray-300 text-gray-500 cursor-not-allowed mt-2"
-                : "bg-gradient-to-r from-[#7565D9] to-[#4D0ACD] text-white"
+                : "bg-gradient-to-r from-[#7565D9] to-[#4D0ACD] text-white cursor-pointer"
             }`}
           type="button"
         >

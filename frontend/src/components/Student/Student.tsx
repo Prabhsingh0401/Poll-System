@@ -63,6 +63,7 @@ const Student: React.FC = () => {
     useState<boolean>(false);
   const [pollHistory, setPollHistory] = useState<PollHistoryItem[]>([]);
   const [studentAnswers, setStudentAnswers] = useState<StudentAnswers>({});
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [pollEnded, setPollEnded] = useState<boolean>(false);
 
   const { remainingTime, setRemainingTime, resetTimer, clearTimer } =
@@ -95,6 +96,7 @@ const Student: React.FC = () => {
           pollEnded: boolean;
           pollHistory: PollHistoryItem[];
           studentAnswers: StudentAnswers;
+          currentQuestionIndex?: number;
         } = JSON.parse(savedPollData);
 
         dispatch(setPoll(pollData.poll));
@@ -105,6 +107,13 @@ const Student: React.FC = () => {
         setPollEnded(pollData.pollEnded);
         setPollHistory(pollData.pollHistory ?? []);
         setStudentAnswers(pollData.studentAnswers ?? {});
+        setCurrentQuestionIndex(
+          typeof pollData.currentQuestionIndex === "number"
+            ? pollData.currentQuestionIndex
+            : pollData.pollHistory
+              ? pollData.pollHistory.length
+              : 0,
+        );
       }
     } catch (error) {
       console.error("Error loading saved session:", error);
@@ -133,6 +142,15 @@ const Student: React.FC = () => {
         setWaitingForNextQuestion(false);
         setPollEnded(false);
 
+        // Update pollHistory and set currentQuestionIndex to the index where this poll will be added
+        setPollHistory((prev) => {
+          const last = prev[prev.length - 1];
+          if (last && last.question === newPoll.question) return prev;
+          // Poll will be added at index prev.length
+          setCurrentQuestionIndex(prev.length);
+          return [...prev, newPoll];
+        });
+
         if (newPoll.pollStartTime && newPoll.serverTime && newPoll.duration) {
           resetTimer(newPoll.duration);
         } else if (newPoll.duration !== undefined) {
@@ -142,6 +160,19 @@ const Student: React.FC = () => {
     },
     [dispatch, resetTimer],
   );
+
+  // Restore currentQuestionIndex on page load if not already set
+  useEffect(() => {
+    if (
+      pollHistory.length > 0 &&
+      currentQuestionIndex === 0 &&
+      pollHistory[0].question
+    ) {
+      // This might be a fresh page load, currentQuestionIndex should match pollHistory length
+      // But only if we haven't already set it (to avoid overwriting the callback's setting)
+      return;
+    }
+  }, []);
 
   const onPollUpdated = useCallback(
     (updatedPoll: PollState): void => {
@@ -214,6 +245,16 @@ const Student: React.FC = () => {
   useSocket("kicked", onKicked);
   useSocket("error", onError);
 
+  useEffect(() => {
+    try {
+      if (socket && !socket.connected) {
+        socket.connect();
+      }
+    } catch (err) {
+      console.error("Error connecting socket:", err);
+    }
+  }, []);
+
   /* -------------------- Persist Poll State -------------------- */
 
   useEffect(() => {
@@ -227,6 +268,7 @@ const Student: React.FC = () => {
         pollEnded,
         pollHistory,
         studentAnswers,
+        currentQuestionIndex,
       };
       localStorage.setItem("studentPollData", JSON.stringify(pollData));
     } catch (error) {
@@ -241,6 +283,7 @@ const Student: React.FC = () => {
     pollEnded,
     pollHistory,
     studentAnswers,
+    currentQuestionIndex,
   ]);
 
   /* -------------------- Handlers -------------------- */
@@ -266,7 +309,6 @@ const Student: React.FC = () => {
   const submitAnswer = (): void => {
     if (!selectedOption || !name) return;
 
-    const currentQuestionIndex = pollHistory.length;
     setStudentAnswers((prev) => ({
       ...prev,
       [currentQuestionIndex]: selectedOption,

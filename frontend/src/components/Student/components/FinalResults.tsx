@@ -47,7 +47,11 @@ const FinalResults: React.FC<FinalResultsProps> = ({
       const pollCorrect = (poll as any).correctAnswer;
 
       if (typeof pollCorrect !== "undefined" && pollCorrect != null) {
-        if (studentAnswer === pollCorrect) {
+        // Trim both for consistent comparison
+        const trimmedStudentAnswer = studentAnswer.trim();
+        const trimmedCorrectAnswer = pollCorrect.trim();
+
+        if (trimmedStudentAnswer === trimmedCorrectAnswer) {
           correctCount++;
         } else {
           wrongCount++;
@@ -67,6 +71,27 @@ const FinalResults: React.FC<FinalResultsProps> = ({
   const totalQuestions = pollHistory.length;
   const percentage =
     totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+
+  // Debug logging
+  if (process.env.NODE_ENV === "development") {
+    console.debug("FinalResults calculation:", {
+      pollHistoryLength: pollHistory.length,
+      studentAnswersKeys: Object.keys(studentAnswers),
+      correctCount,
+      wrongCount,
+      pollHistory: pollHistory.map((p, i) => ({
+        index: i,
+        question: p.question,
+        correctAnswer: (p as any).correctAnswer,
+        correctAnswerTrimmed: ((p as any).correctAnswer || "").trim(),
+        studentAnswer: studentAnswers[i],
+        studentAnswerTrimmed: (studentAnswers[i] || "").trim(),
+        matches:
+          (studentAnswers[i] || "").trim() ===
+          ((p as any).correctAnswer || "").trim(),
+      })),
+    });
+  }
 
   /* -------------------- UI -------------------- */
 
@@ -171,7 +196,7 @@ const FinalResults: React.FC<FinalResultsProps> = ({
               const pollCorrect = (poll as any).correctAnswer;
               const isCorrect = !!studentAnswer
                 ? typeof pollCorrect !== "undefined" && pollCorrect != null
-                  ? studentAnswer === pollCorrect
+                  ? studentAnswer.trim() === pollCorrect.trim()
                   : poll.options.includes(studentAnswer)
                 : false;
 
